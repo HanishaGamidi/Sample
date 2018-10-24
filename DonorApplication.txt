@@ -1,0 +1,1052 @@
+package com.capgemini.donorapplication.bean;
+
+import java.util.Date;
+
+
+public class DonorBean 
+{
+	private String donorId;
+	private String donorName;
+	private String phoneNumber;
+	private String address;
+	private double donationAmount;
+	private Date donationDate;
+	
+	public String getDonorId() {
+		return donorId;
+	}
+	public void setDonorId(String donorId) {
+		this.donorId = donorId;
+	}
+	public String getDonorName() {
+		return donorName;
+	}
+	public void setDonorName(String donorName) {
+		this.donorName = donorName;
+	}
+	public String getPhoneNumber() {
+		return phoneNumber;
+	}
+	public void setPhoneNumber(String phoneNumber) {
+		this.phoneNumber = phoneNumber;
+	}
+	public String getAddress() {
+		return address;
+	}
+	public void setAddress(String address) {
+		this.address = address;
+	}
+	public double getDonationAmount() {
+		return donationAmount;
+	}
+	public void setDonationAmount(double donationAmount) {
+		this.donationAmount = donationAmount;
+	}
+	public Date getDonationDate() {
+		return donationDate;
+	}
+	public void setDonationDate(Date donationDate) {
+		this.donationDate = donationDate;
+	}
+	
+	public String toString()
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("Printing Donor Details \n");
+		sb.append("Donor Name: " +donorName +"\n");
+		sb.append("Donor Address: "+ address +"\n");
+		sb.append("Phone Number: "+ phoneNumber +"\n");
+		sb.append("Donation Amount: "+ donationAmount +"\n");
+		sb.append("Donation Date: "+ donationDate);
+		return sb.toString();
+	}
+	
+
+	
+}
+
+package com.capgemini.donorapplication.dao;
+
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+import com.capgemini.donorapplication.bean.DonorBean;
+import com.capgemini.donorapplication.exception.DonorException;
+import com.capgemini.donorapplication.util.DBConnection;
+
+
+public class DonorDaoImpl implements IDonorDAO 
+{
+	
+	Logger logger=Logger.getRootLogger();
+	public DonorDaoImpl()
+	{
+	PropertyConfigurator.configure("resources//log4j.properties");
+	
+	}
+	
+
+	//------------------------ 1. Donor Application --------------------------
+	/*******************************************************************************************************
+	 - Function Name	:	addDonorDetails(DonorBean donor)
+	 - Input Parameters	:	DonorBean donor
+	 - Return Type		:	String
+	 - Throws			:  	DonorException
+	 - Author			:	CAPGEMINI
+	 - Creation Date	:	18/11/2016
+	 - Description		:	Adding Donor
+	 ********************************************************************************************************/
+
+	public String addDonorDetails(DonorBean donor) throws DonorException 
+	{
+		Connection connection = DBConnection.getInstance().getConnection();	
+		
+		PreparedStatement preparedStatement=null;		
+		ResultSet resultSet = null;
+		
+		String donorId=null;
+		
+		int queryResult=0;
+		try
+		{		
+			preparedStatement=connection.prepareStatement(QueryMapper.INSERT_QUERY);
+
+			preparedStatement.setString(1,donor.getDonorName());			
+			preparedStatement.setString(2,donor.getAddress());
+			preparedStatement.setString(3,donor.getPhoneNumber());
+			preparedStatement.setDouble(4,donor.getDonationAmount());			
+			
+			queryResult=preparedStatement.executeUpdate();
+		
+			preparedStatement = connection.prepareStatement(QueryMapper.DONARID_QUERY_SEQUENCE);
+			resultSet=preparedStatement.executeQuery();
+
+			if(resultSet.next())
+			{
+				donorId=resultSet.getString(1);
+						
+			}
+	
+			if(queryResult==0)
+			{
+				logger.error("Insertion failed ");
+				throw new DonorException("Inserting donor details failed ");
+
+			}
+			else
+			{
+				logger.info("Donor details added successfully:");
+				return donorId;
+			}
+
+		}
+		catch(SQLException sqlException)
+		{
+			sqlException.printStackTrace();
+			logger.error(sqlException.getMessage());
+			throw new DonorException("Tehnical problem occured refer log");
+		}
+
+		finally
+		{
+			try 
+			{
+				//resultSet.close();
+				preparedStatement.close();
+				connection.close();
+			}
+			catch (SQLException sqlException) 
+			{
+				sqlException.printStackTrace();
+				logger.error(sqlException.getMessage());
+				throw new DonorException("Error in closing db connection");
+
+			}
+		}
+		
+		
+	}
+
+	//------------------------ 1. Donor Application --------------------------
+	/*******************************************************************************************************
+	 - Function Name	:	viewDonorDetails(String donorId)
+	 - Input Parameters	:	donorId
+	 - Return Type		:	DonorBean
+	 - Throws			:  	DonorException
+	 - Author			:	CAPGEMINI
+	 - Creation Date	:	18/11/2016
+	 - Description		:	ViewDonorDetails
+	 ********************************************************************************************************/
+	public DonorBean viewDonorDetails(String donorId) throws DonorException {
+		
+		Connection connection=DBConnection.getInstance().getConnection();
+		
+		
+		PreparedStatement preparedStatement=null;
+		ResultSet resultset = null;
+		DonorBean bean=null;
+		
+		try
+		{
+			preparedStatement=connection.prepareStatement(QueryMapper.VIEW_DONAR_DETAILS_QUERY);
+			preparedStatement.setString(1,donorId);
+			resultset=preparedStatement.executeQuery();
+			
+			if(resultset.next())
+			{
+				bean = new DonorBean();
+				bean.setDonorName(resultset.getString(1));
+				bean.setAddress(resultset.getString(2));
+				bean.setPhoneNumber(resultset.getString(3));
+				bean.setDonationDate(resultset.getDate(4));
+				bean.setDonationAmount(resultset.getDouble(5));
+				
+			}
+			
+			if( bean != null)
+			{
+				logger.info("Record Found Successfully");
+				return bean;
+			}
+			else
+			{
+				logger.info("Record Not Found Successfully");
+				return null;
+			}
+			
+		}
+		catch(Exception e)
+		{
+			logger.error(e.getMessage());
+			throw new DonorException(e.getMessage());
+		}
+		finally
+		{
+			try 
+			{
+				resultset.close();
+				preparedStatement.close();
+				connection.close();
+			} 
+			catch (SQLException e) 
+			{
+				logger.error(e.getMessage());
+				throw new DonorException("Error in closing db connection");
+
+			}
+		}
+		
+	}
+
+	//------------------------ 1. Donor Application --------------------------
+	/*******************************************************************************************************
+	 - Function Name	:	retriveAllDetails()
+	 - Input Parameters	:	
+	 - Return Type		:	List
+	 - Throws		    :  	DonorException
+	 - Author	     	:	CAPGEMINI
+	 - Creation Date	:	18/11/2016
+	 - Description		:	return list
+	 ********************************************************************************************************/
+
+	public List<DonorBean> retriveAllDetails() throws DonorException {
+		
+		Connection con=DBConnection.getInstance().getConnection();
+		int donorCount = 0;
+		
+		PreparedStatement ps=null;
+		ResultSet resultset = null;
+		
+		List<DonorBean> donorList=new ArrayList<DonorBean>();
+		try
+		{
+			ps=con.prepareStatement(QueryMapper.RETRIVE_ALL_QUERY);
+			resultset=ps.executeQuery();
+			
+			while(resultset.next())
+			{	
+				DonorBean bean=new DonorBean();
+				bean.setDonorName(resultset.getString(1));
+				bean.setAddress(resultset.getString(2));
+				bean.setPhoneNumber(resultset.getString(3));
+				bean.setDonationDate(resultset.getDate(4));
+				bean.setDonationAmount(resultset.getDouble(5));
+				donorList.add(bean);
+				
+				donorCount++;
+			}			
+			
+		} catch (SQLException sqlException) {
+			logger.error(sqlException.getMessage());
+			throw new DonorException("Tehnical problem occured. Refer log");
+		}
+		
+		finally
+		{
+			try 
+			{
+				resultset.close();
+				ps.close();
+				con.close();
+			} 
+			catch (SQLException e) 
+			{
+				logger.error(e.getMessage());
+				throw new DonorException("Error in closing db connection");
+
+			}
+		}
+		
+		if( donorCount == 0)
+			return null;
+		else
+			return donorList;
+	}
+
+}
+Interface
+package com.capgemini.donorapplication.dao;
+
+import java.util.List;
+
+import com.capgemini.donorapplication.bean.DonorBean;
+import com.capgemini.donorapplication.exception.DonorException;
+
+public interface IDonorDAO 
+{
+	public String addDonorDetails(DonorBean donor) throws DonorException;
+	public DonorBean viewDonorDetails(String donorId) throws DonorException;
+	public List<DonorBean> retriveAllDetails()throws DonorException;
+}
+
+Interface
+package com.capgemini.donorapplication.dao;
+
+public interface QueryMapper {
+	
+	public static final String RETRIVE_ALL_QUERY="SELECT donor_name,address,phone_number,donor_date,donor_amount FROM donor_details";
+	public static final String VIEW_DONAR_DETAILS_QUERY="SELECT donor_name,address,phone_number,donor_date,donor_amount FROM donor_details WHERE  donor_id=?";
+	public static final String INSERT_QUERY="INSERT INTO donor_details VALUES(donorId_sequence.NEXTVAL,?,?,?,SYSDATE,?)";
+	public static final String DONARID_QUERY_SEQUENCE="SELECT donorId_sequence.CURRVAL FROM DUAL";
+	
+	
+}
+
+package com.capgemini.donorapplication.exception;
+
+public class DonorException extends Exception 
+{
+	private static final long serialVersionUID = 726264577455921591L;
+
+	public DonorException(String message) 
+	{
+		
+		super(message);
+	}
+}
+
+package com.capgemini.donorapplication.pi;
+
+import java.util.ArrayList;
+import java.util.InputMismatchException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Scanner;
+
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+
+import com.capgemini.donorapplication.bean.DonorBean;
+import com.capgemini.donorapplication.exception.DonorException;
+import com.capgemini.donorapplication.service.DonorServiceImpl;
+import com.capgemini.donorapplication.service.IDonorService;
+
+public class DonorMain {
+
+	static Scanner sc = new Scanner(System.in);
+	static IDonorService donorService = null;
+	static DonorServiceImpl donorServiceImpl = null;
+	static Logger logger = Logger.getRootLogger();
+
+	public static void main(String[] args) {
+		PropertyConfigurator.configure("resources//log4j.properties");
+		DonorBean donorBean = null;
+
+		String donorId = null;
+		int option = 0;
+
+		while (true) {
+
+			// show menu
+			System.out.println();
+			System.out.println();
+			System.out.println("   ICARE CAPGEMINI TRUST ");
+			System.out.println("_______________________________\n");
+
+			System.out.println("1.Add Donator ");
+			System.out.println("2.View Donator");
+			System.out.println("3.Retrive All");
+			System.out.println("4.Exit");
+			System.out.println("________________________________");
+			System.out.println("Select an option:");
+			// accept option
+
+			try {
+				option = sc.nextInt();
+
+				switch (option) {
+
+				case 1:
+
+					while (donorBean == null) {
+						donorBean = populateDonorBean();
+						// System.out.println(donorBean);
+					}
+
+					try {
+						donorService = new DonorServiceImpl();
+						donorId = donorService.addDonorDetails(donorBean);
+
+						System.out
+								.println("Donator details  has been successfully registered ");
+						System.out.println("Donator  ID Is: " + donorId);
+
+					} catch (DonorException donorException) {
+						logger.error("exception occured", donorException);
+						System.out.println("ERROR : "
+								+ donorException.getMessage());
+					} finally {
+						donorId = null;
+						donorService = null;
+						donorBean = null;
+					}
+
+					break;
+
+				case 2:
+
+					donorServiceImpl = new DonorServiceImpl();
+
+					System.out.println("Enter numeric donor id:");
+					donorId = sc.next();
+
+					while (true) {
+						if (donorServiceImpl.validateDonorId(donorId)) {
+							break;
+						} else {
+							System.err
+									.println("Please enter numeric donor id only, try again");
+							donorId = sc.next();
+						}
+					}
+
+					donorBean = getDonorDetails(donorId);
+
+					if (donorBean != null) {
+						System.out.println("Name             :"
+								+ donorBean.getDonorName());
+						System.out.println("Address          :"
+								+ donorBean.getAddress());
+						System.out.println("Phone Number     :"
+								+ donorBean.getPhoneNumber());
+						System.out.println("Donor Date       :"
+								+ donorBean.getDonationDate());
+						System.out.println("Donation Amount  :"
+								+ donorBean.getDonationAmount());
+					} else {
+						System.err
+								.println("There are no donation details associated with donor id "
+										+ donorId);
+					}
+
+					break;
+
+				case 3:
+
+					donorService = new DonorServiceImpl();
+					try {
+						List<DonorBean> donorList = new ArrayList<DonorBean>();
+						donorList = donorService.retriveAll();
+
+						if (donorList != null) {
+							Iterator<DonorBean> i = donorList.iterator();
+							while (i.hasNext()) {
+								System.out.println(i.next());
+							}
+						} else {
+							System.out
+									.println("Nobody has made a donation, yet.");
+						}
+
+					}
+
+					catch (DonorException e) {
+
+						System.out.println("Error  :" + e.getMessage());
+					}
+
+					break;
+
+				case 4:
+
+					System.out.print("Exit Trust Application");
+					System.exit(0);
+					break;
+				default:
+					System.out.println("Enter a valid option[1-4]");
+				}// end of switch
+			}
+
+			catch (InputMismatchException e) {
+				sc.nextLine();
+				System.err.println("Please enter a numeric value, try again");
+			}
+
+		}// end of while
+	}// end of try
+
+	/*
+	 * This function will call the service layer method and return the bean
+	 * object which is populated by the information of the given donorId in
+	 * parameter
+	 */
+	private static DonorBean getDonorDetails(String donorId) {
+		DonorBean donorBean = null;
+		donorService = new DonorServiceImpl();
+
+		try {
+			donorBean = donorService.viewDonorDetails(donorId);
+		} catch (DonorException donarException) {
+			logger.error("exception occured ", donarException);
+			System.out.println("ERROR : " + donarException.getMessage());
+		}
+
+		donorService = null;
+		return donorBean;
+	}
+
+	/*
+	 * This function will be called by main and will return a validated bean
+	 * object OR null if details are invalid
+	 */
+	private static DonorBean populateDonorBean() {
+
+		// Reading and setting the values for the donorBean
+		
+		DonorBean donorBean = new DonorBean();;
+
+		System.out.println("\n Enter Details");
+
+		System.out.println("Enter donor name: ");
+		donorBean.setDonorName(sc.next());
+
+		System.out.println("Enter donor contact: ");
+		donorBean.setPhoneNumber(sc.next());
+
+		System.out.println("Enter donor address: ");
+		donorBean.setAddress(sc.next());
+
+		System.out.println("Enter donation amount: ");
+
+		try {
+			donorBean.setDonationAmount(sc.nextFloat());
+		} catch (InputMismatchException inputMismatchException) {
+			sc.nextLine();
+			System.err
+					.println("Please enter a numeric value for donation amount, try again");
+			}
+
+		donorServiceImpl = new DonorServiceImpl();
+
+		try {
+			donorServiceImpl.validateDonor(donorBean);
+			return donorBean;
+		} catch (DonorException donorException) {
+			logger.error("exception occured", donorException);
+			System.err.println("Invalid data:");
+			System.err.println(donorException.getMessage() + " \n Try again..");
+			System.exit(0);
+
+		}
+		return null;
+
+	}
+}
+
+package com.capgemini.donorapplication.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.capgemini.donorapplication.bean.DonorBean;
+import com.capgemini.donorapplication.dao.DonorDaoImpl;
+import com.capgemini.donorapplication.dao.IDonorDAO;
+import com.capgemini.donorapplication.exception.DonorException;
+
+public class DonorServiceImpl implements IDonorService {
+	
+	IDonorDAO donorDao;
+	
+	//------------------------ 1. Donor Application --------------------------
+	/*******************************************************************************************************
+	 - Function Name	:	addDonorDetails
+	 - Input Parameters	:	donor object
+	 - Return Type		:	String id
+	 - Throws			:  	DonorException
+	 - Author			:	CAPGEMINI
+	 - Creation Date	:	11/11/2016
+	 - Description		:	adding donor to database calls dao method addDonorDetails(donor)
+	 ********************************************************************************************************/
+	public String addDonorDetails(DonorBean donor) throws DonorException {
+		donorDao=new DonorDaoImpl();	
+		String donorSeq;
+		donorSeq= donorDao.addDonorDetails(donor);
+		return donorSeq; 
+	}
+
+	//------------------------ 1. Donor Application --------------------------
+	/*******************************************************************************************************
+	 - Function Name	:	viewDonorDetails
+	 - Input Parameters	:	String donorId
+	 - Return Type		:	donor object
+	 - Throws		    :  	DonorException
+	 - Author		    :	CAPGEMINI
+	 - Creation Date	:	18/11/2016
+	 - Description		:	calls dao method viewDonorDetails(donorId)
+	 ********************************************************************************************************/
+	public DonorBean viewDonorDetails(String donorId) throws DonorException {
+		donorDao=new DonorDaoImpl();
+		DonorBean bean=null;
+		bean=donorDao.viewDonorDetails(donorId);
+		return bean;
+	}
+
+	//------------------------ 1. Donor Application --------------------------
+	/*******************************************************************************************************
+	 - Function Name	: retriveAll()
+	 - Input Parameters	:	
+	 - Return Type		: list
+	 - Throws		    : DonorException
+	 - Author	      	: CAPGEMINI 
+	 - Creation Date	: 18/11/2016
+	 - Description		: calls dao method retriveAllDetails()
+	 ********************************************************************************************************/
+	public List<DonorBean> retriveAll() throws DonorException {
+		donorDao=new DonorDaoImpl();
+		List<DonorBean> donorList=null;
+		donorList=donorDao.retriveAllDetails();
+		return donorList;
+	}
+	
+	
+	/*******************************************************************************************************
+	 - Function Name	: validateDonor(DonorBean bean)
+	 - Input Parameters	: DonorBean bean
+	 - Return Type		: void
+	 - Throws		    : DonorException
+	 - Author	      	: CAPGEMINI
+	 - Creation Date	: 18/11/2016
+	 - Description		: validates the DonorBean object
+	 ********************************************************************************************************/
+	public void validateDonor(DonorBean bean) throws DonorException
+	{
+		List<String> validationErrors = new ArrayList<String>();
+
+		//Validating donor name
+		if(!(isValidName(bean.getDonorName()))) {
+			validationErrors.add("\n Donar Name Should Be In Alphabets and minimum 3 characters long ! \n");
+		}
+		//Validating address
+		if(!(isValidAddress(bean.getAddress()))){
+			validationErrors.add("\n Address Should Be Greater Than 5 Characters \n");
+		}
+		//Validating Phone Number
+		if(!(isValidPhoneNumber(bean.getPhoneNumber()))){
+			validationErrors.add("\n Phone Number Should be in 10 digit \n");
+		}
+		//Validating Donation Amount
+		if(!(isValidAmount(bean.getDonationAmount()))){
+			validationErrors.add("\n Amount Should be a positive Number \n" );
+		}
+		
+		if(!validationErrors.isEmpty())
+			throw new DonorException(validationErrors +"");
+	}
+
+	public boolean isValidName(String donorName){
+		Pattern namePattern=Pattern.compile("^[A-Za-z]{3,}$");
+		Matcher nameMatcher=namePattern.matcher(donorName);
+		return nameMatcher.matches();
+	}
+	public boolean isValidAddress(String address){
+		return (address.length() > 6);
+	}
+	
+	public boolean isValidPhoneNumber(String phoneNumber){
+		Pattern phonePattern=Pattern.compile("^[1-9]{1}[0-9]{9}$");
+		Matcher phoneMatcher=phonePattern.matcher(phoneNumber);
+		return phoneMatcher.matches();
+		
+	}
+	public boolean isValidAmount(double amount){
+		return (amount>0);
+	}
+	public boolean validateDonorId(String donorId) {
+		
+		Pattern idPattern = Pattern.compile("[0-9]{1,4}");
+		Matcher idMatcher = idPattern.matcher(donorId);
+		
+		if(idMatcher.matches())
+			return true;
+		else
+			return false;		
+	}
+}
+
+	
+Interface
+package com.capgemini.donorapplication.service;
+
+import java.util.List;
+
+import com.capgemini.donorapplication.bean.DonorBean;
+import com.capgemini.donorapplication.exception.DonorException;
+
+public interface IDonorService 
+{
+	public String addDonorDetails(DonorBean donor) throws DonorException;
+	public DonorBean viewDonorDetails(String donorId) throws DonorException;
+	public List<DonorBean> retriveAll()throws DonorException;
+}
+
+package com.capgemini.donorapplication.util;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Properties;
+
+import oracle.jdbc.pool.OracleDataSource;
+
+import com.capgemini.donorapplication.exception.DonorException;
+
+public class DBConnection {
+	private static Connection conn = null;
+	private static DBConnection instance = null;
+	private static Properties props = null;
+	private static OracleDataSource dataSource = null;
+
+
+	/*************************************************************************************
+	 *  - @throws DonorException
+	 *  - Private Constructor
+	 *  - Author : CAPGEMINI 
+	 *  - Creation Date : 18/11/2016
+	 *  - Desc:Loads the  jdbc.properties file and Driver Class and gets the connection
+	 ***************************************************************************************/
+	private DBConnection() throws DonorException {
+		try {
+			props = loadProperties();
+			dataSource = prepareDataSource();
+		} catch (IOException e) {
+			throw new DonorException(
+					" Could not read the database details from properties file ");
+		} catch (SQLException e) {
+			throw new DonorException(e.getMessage());
+		}
+
+	}
+
+	/*****************************************************************
+	 *  - Method Name:getInstance() 
+	 *  - Input Parameters : 
+	 *  - Return Type :DBConnection instance
+	 *  - Throws : DonorException 
+	 *  - Author : CAPGEMINI 
+	 *  - Creation Date : 18/11/2016
+	 *  - Description : Singleton and Thread safe class
+	 *******************************************************************/
+	
+	public static DBConnection getInstance() throws DonorException {
+		synchronized (DBConnection.class) {
+			if (instance == null) {
+				instance = new DBConnection();
+			}
+		}
+		return instance;
+	}
+	
+	/*****************************************************************
+	 *  - Method Name:getConnection() 
+	 *  - Input Parameters : 
+	 *  - Return Type :DBConnection instance
+	 *  - Throws : DonorException 
+	 *  - Author : CAPGEMINI 
+	 *  - Creation Date : 18/11/2016
+	 *  - Description :  Returns connection object
+	 *******************************************************************/
+	public Connection getConnection() throws DonorException {
+		try {
+
+			conn = dataSource.getConnection();
+
+		} catch (SQLException e) {
+			
+			throw new DonorException(" Database connection problem");
+		}
+		return conn;
+	}
+	
+	/*****************************************************************
+	 *  - Method Name:loadProperties()
+	 *  - Input Parameters : 
+	 *  - Return Type :Properties object
+	 *  - Author : CAPGEMINI 
+	 *  - Creation Date : 18/11/2016
+	 *  - Description : Returns Properties object
+	 *******************************************************************/
+	
+	private Properties loadProperties() throws IOException {
+
+		if (props == null) {
+			Properties newProps = new Properties();
+			String fileName = "resources/jdbc.properties";
+
+			InputStream inputStream = new FileInputStream(fileName);
+			newProps.load(inputStream);
+
+			inputStream.close();
+
+			return newProps;
+		} else {
+			return props;
+		}
+	}
+
+
+	/*****************************************************************
+	 *  - Method Name:prepareDataSource() 
+	 *  - Input Parameters : 
+	 *  - Return Type :OracleDataSource object
+	 *  - Author : CAPGEMINI 
+	 *  - Creation Date : 18/11/2016
+	 *  - Description : Returns OracleDataSource object
+	 *******************************************************************/
+	
+	private OracleDataSource prepareDataSource() throws SQLException {
+
+		if (dataSource == null) {
+			if (props != null) {
+				String connectionURL = props.getProperty("dburl");
+				String username = props.getProperty("username");
+				String password = props.getProperty("password");
+
+				dataSource = new OracleDataSource();
+
+				dataSource.setURL(connectionURL);
+				dataSource.setUser(username);
+				dataSource.setPassword(password);
+			}
+		}
+		return dataSource;
+	}
+
+}
+
+package com.capgemini.donorapplication.test;
+
+import java.sql.Connection;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import com.capgemini.donorapplication.dao.DonorDaoImpl;
+import com.capgemini.donorapplication.exception.DonorException;
+import com.capgemini.donorapplication.util.DBConnection;
+
+public class DBConnectionTest {
+	static DonorDaoImpl daotest;
+	static Connection dbCon;
+
+	@BeforeClass
+	public static void initialise() {
+		daotest = new DonorDaoImpl();
+		dbCon = null;
+	}
+
+	@Before
+	public void beforeEachTest() {
+		System.out.println("----Starting DBConnection Test Case----\n");
+	}
+
+	/**
+	 * Test case for Establishing Connection
+	 * 
+	 * @throws DonorException
+	 **/
+	@Test
+	public void test() throws DonorException {
+		Connection dbCon = DBConnection.getInstance().getConnection();
+		Assert.assertNotNull(dbCon);
+	}
+
+	@After
+	public void afterEachTest() {
+		System.out.println("----End of DBConnection Test Case----\n");
+	}
+
+	@AfterClass
+	public static void destroy() {
+		System.out.println("\t----End of Tests----");
+		daotest = null;
+		dbCon = null;
+	}
+
+}
+
+package com.capgemini.donorapplication.test;
+
+import static org.junit.Assert.*;
+
+import java.sql.Date;
+import java.time.LocalDate;
+
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.capgemini.donorapplication.bean.DonorBean;
+import com.capgemini.donorapplication.dao.DonorDaoImpl;
+import com.capgemini.donorapplication.exception.DonorException;
+import com.capgemini.donorapplication.service.DonorServiceImpl;
+import com.capgemini.donorapplication.service.IDonorService;
+
+public class DonorDaoTest {
+
+	static DonorDaoImpl dao;
+	static DonorBean donor;
+
+	@BeforeClass
+	public static void initialize() {
+		System.out.println("in before class");
+		dao = new DonorDaoImpl();
+		donor = new DonorBean();
+	}
+
+	@Test
+	public void testAddDonarDetails() throws DonorException {
+
+		assertNotNull(dao.addDonorDetails(donor));
+
+	}
+
+	/************************************
+	 * Test case for addDonarDetails()
+	 * 
+	 ************************************/
+
+	@Ignore
+	@Test
+	public void testAddDonarDetails1() throws DonorException {
+		// increment the number next time you test for positive test case
+		assertEquals(1001, dao.addDonorDetails(donor));
+	}
+
+	/************************************
+	 * Test case for addDonarDetails()
+	 * 
+	 ************************************/
+
+	@Test
+	public void testAddDonarDetails2() throws DonorException {
+
+		donor.setDonorName("Shashwathi");
+		donor.setPhoneNumber("9876543210");
+		donor.setAddress("whitefield");
+		donor.setDonationAmount(5000);
+		assertTrue("Data Inserted successfully",
+				Integer.parseInt(dao.addDonorDetails(donor)) > 1000);
+
+	}
+
+	/********************************************
+	 * Test case for retriveAllDetails()
+	 ************************************************/
+	@Test
+	public void testViewAll() throws DonorException {
+		assertNotNull(dao.retriveAllDetails());
+	}
+
+	/****************************************************
+	 * Test case for viewById()
+	 ******************************************************/
+
+	@Test
+	public void testById() throws DonorException {
+		assertNotNull(dao.viewDonorDetails("1010"));
+	}
+
+	@Ignore
+	@Test
+	public void testById1() throws DonorException {
+		assertEquals("TestName", dao.viewDonorDetails("1010").getDonorName());
+	}
+
+}
+Resources
+# File contains JDBC properties
+
+dburl=jdbc:oracle:thin:@10.51.103.201:1521:orcl11g
+driver=oracle.jdbc.OracleDriver
+username=lab1gtrg40
+password=lab1goracle	
+
+log4j.rootLogger=INFO, logfile
+
+#log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+#log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+#log4j.appender.stdout.layout.ConversionPattern=%d %p [%c] - <%m>%n
+
+log4j.appender.logfile=org.apache.log4j.RollingFileAppender
+log4j.appender.logfile.File=donor.log
+log4j.appender.logfile.MaxFileSize=512KB
+# Keep three backup files.
+log4j.appender.logfile.MaxBackupIndex=3
+# Pattern to output: date priority [category] - message
+log4j.appender.logfile.layout=org.apache.log4j.PatternLayout
+#log4j.appender.logfile.layout.ConversionPattern=%d %p [%c] - %m%n
+log4j.appender.logfile.layout.ConversionPattern=%d{yyyy-MM-dd}-%t-%-5p-%-10c:%m%n
+
+Tablescript.sql
+CREATE TABLE Donor_Details(
+Donor_Id VARCHAR2(20),
+Donor_Name VARCHAR2(20),
+Address VARCHAR2(20),
+Phone_Number VARCHAR2(20),
+Donor_Date DATE,
+Donor_Amount NUMBER);
+
+CREATE SEQUENCE donorId_sequence
+START WITH 1000;
+
+
